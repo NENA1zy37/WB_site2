@@ -1,0 +1,321 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>BDDS — План/Факт (Hacker UI)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{% static 'css/index.css' %}">
+  <link rel="stylesheet" href="{% static 'css/BDDS.css' %}">
+  <!-- Если .days не должны быть видны при закрытой колонке:
+       .col-week:not(.is-open) .days { display:none; } — уже есть в CSS ниже -->
+</head>
+<body class="b-stage hacker">
+  <header class="b-head">
+    <div class="b-title">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM3 8h18M8 3v18" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <h1><span class="blink">▮</span> BDDS — Weekly Planner</h1>
+    </div>
+
+    <div class="head-actions">
+      <button class="btn ghost" type="button" id="btnRefresh">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M20 7a8 8 0 10.9 7H18m2 0V8h-6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Обновить
+      </button>
+      <form id="uploadForm" class="b-upload" enctype="multipart/form-data">
+        <label class="btn">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-3.5-3.5M12 15l3.5-3.5M4 21h16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Загрузить Excel
+          <input type="file" name="file" accept=".xlsx,.xls" hidden>
+        </label>
+      </form>
+    </div>
+  </header>
+
+  <!-- Панель периода в «хакерском» стиле -->
+  <section class="calendar-bar" aria-label="Выбор периода">
+    <div class="cal-grid">
+      <div class="cal-block">
+        <div class="cal-caption">Период</div>
+        <div class="cal-fields">
+          <label class="cal-field">
+            <span>С</span>
+            <input type="date" id="dateStart">
+          </label>
+          <label class="cal-field">
+            <span>По</span>
+            <input type="date" id="dateEnd">
+          </label>
+          <label class="cal-toggle mono"><input type="checkbox" id="usePeriod"> Use period</label>
+          <button type="button" id="applyPeriod" class="btn neon">Применить</button>
+        </div>
+      </div>
+
+      <div class="cal-block">
+        <div class="cal-caption">Пресеты</div>
+        <div class="cal-preset">
+          <button type="button" class="chip neon" data-preset="this-week">Текущая неделя</button>
+          <button type="button" class="chip" data-preset="prev-week">Прошлая неделя</button>
+          <button type="button" class="chip" data-preset="last-7">Последние 7</button>
+          <button type="button" class="chip" data-preset="month">Этот месяц</button>
+          <button type="button" class="chip ghost" data-preset="clear">Сброс</button>
+        </div>
+      </div>
+
+      <div class="cal-block cal-status mono" id="periodStatus" aria-live="polite"></div>
+
+      <div class="cal-block cal-actions">
+        <button id="btnOpenAll" class="btn ghost">Открыть все</button>
+        <button id="btnCollapseAll" class="btn ghost">Свернуть все</button>
+      </div>
+    </div>
+  </section>
+
+  <main class="b-main">
+    <div class="table-wrap">
+      <table class="sales-table" id="salesTable">
+        <thead>
+          <tr>
+            <th class="col-sku stick-left">SKU</th>
+            <th class="col-plan stick-left">План/нед.</th>
+            {% for w in "1234" %}
+              <th class="col-week" data-week="{{ w }}">
+                <div class="whead">
+                  <span class="wtitle">Неделя {{ w }}</span>
+                  <span class="wstatus" data-wstatus="{{ w }}">—</span>
+                  <button class="toggle-all" data-week="{{ w }}" type="button" aria-pressed="true" title="Показать/скрыть дни">
+                    <svg width="14" height="14" viewBox="0 0 24 24" class="chev"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
+              </th>
+            {% endfor %}
+          </tr>
+        </thead>
+
+        <tbody id="tbodyRows">
+          {% for p in plans %}
+          <tr class="row-item" data-sku="{{ p.sku }}">
+            <td class="col-sku stick-left strong mono">{{ p.sku }}</td>
+            <td class="col-plan stick-left strong mono">{{ p.plan_per_week }}</td>
+
+            {% for w in "1234" %}
+              <td class="col-week is-open" data-week="{{ w }}">
+                <div class="week-cell">
+                  <div class="week-top">
+                    <span class="pill plan mono" title="План (прогноз)">~{{ p.plan_per_week }}</span>
+                    <span class="pill fact mono" data-wb-future>факт — 0</span>
+                  </div>
+                  <div class="days dense" data-days>
+                    <div class="day-row"><span class="day-name mono">Пн</span><span class="day-plan text-fade mono"></span><span class="day-fact text-fade mono">0</span></div>
+                    <div class="day-row"><span class="day-name mono">Вт</span><span class="day-plan text-fade mono"></span><span class="day-fact text-fade mono">0</span></div>
+                    <div class="day-row"><span class="day-name mono">Ср</span><span class="day-plan text-fade mono"></span><span class="day-fact text-fade mono">0</span></div>
+                    <div class="day-row"><span class="day-name mono">Чт</span><span class="day-plan text-fade mono"></span><span class="day-fact text-fade mono">0</span></div>
+                    <div class="day-row"><span class="day-name mono">Пт</span><span class="day-plan text-fade mono"></span><span class="day-fact text-fade mono">0</span></div>
+                    <div class="day-row"><span class="day-name mono">Сб</span><span class="day-plan text-fade mono"></span><span class="day-fact text-fade mono">0</span></div>
+                    <div class="day-row"><span class="day-name mono">Вс</span><span class="day-plan text-fade mono"></span><span class="day-fact text-fade mono">0</span></div>
+                  </div>
+                </div>
+              </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="loader" id="globalLoader"><span class="spinner"></span> <span class="mono">LOADING WB…</span></div>
+    </div>
+  </main>
+
+  <script>
+  (function(){
+    // ===== Date utils =====
+    const fmt = (d)=> d.toISOString().slice(0,10);
+    const parseISO = (s)=>{ const [y,m,dd] = s.split('-').map(Number); return new Date(y, m-1, dd); };
+    const monday = (d)=>{ const x = new Date(d); const wd = (x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; };
+    const diffDaysIncl = (a,b)=> Math.floor((parseISO(b)-parseISO(a))/(1000*60*60*24))+1;
+
+    // ===== Period state =====
+    const Period = { use:false, start:null, end:null };
+    function setStatus(){
+      const box = document.getElementById('periodStatus');
+      if(Period.use && Period.start && Period.end){
+        box.textContent = `Период: ${Period.start} — ${Period.end} (дней: ${diffDaysIncl(Period.start, Period.end)})`;
+      }else{ box.textContent = 'Период не используется'; }
+    }
+
+    // ===== Client cache =====
+    const BUCKET_CACHE = {}; // key -> payload
+    const ROW_INDEX = {};    // sku -> <tr>
+    function indexRows(){ document.querySelectorAll('tr.row-item').forEach(r=>{ ROW_INDEX[r.dataset.sku] = r; }); }
+
+    function readPeriod(){
+      const use = document.getElementById('usePeriod')?.checked;
+      const start = document.getElementById('dateStart')?.value || null;
+      const end   = document.getElementById('dateEnd')?.value || null;
+      return (use && start && end) ? {start, end} : null;
+    }
+    function bucketKey(p){ return p ? `${p.start}..${p.end}` : 'none'; }
+
+    async function loadBucket(showSpinner=true){
+      const p = readPeriod();
+      const key = bucketKey(p);
+      if (BUCKET_CACHE[key]) return BUCKET_CACHE[key];
+
+      if(showSpinner) document.getElementById('globalLoader').classList.add('on');
+      const params = new URLSearchParams();
+      if(p){ params.set('start', p.start); params.set('end', p.end); }
+      const res = await fetch("{% url 'bdds_api_facts_bucketed' %}?"+params.toString());
+      const data = await res.json();
+      if(showSpinner) document.getElementById('globalLoader').classList.remove('on');
+      if(!data.ok) throw new Error(data.error || 'WB bucket error');
+      BUCKET_CACHE[key] = data;
+      return data;
+    }
+
+    // ===== Visual helpers =====
+    function ceilPerDay(weekly){ weekly = Number(weekly||0); return Math.ceil(weekly/7); }
+    function fillDayPlans(row){
+      const per = ceilPerDay(row.querySelector('.col-plan').textContent.trim());
+      row.querySelectorAll('.day-row .day-plan').forEach(el=> el.textContent = per);
+      return per;
+    }
+    function paintCellStatus(cell, factTotal, planWeek, daysCount){
+      const expected = ceilPerDay(planWeek) * daysCount;
+      cell.classList.remove('ok','lag');
+      if(factTotal >= expected) cell.classList.add('ok'); else cell.classList.add('lag');
+    }
+    function getWeekCell(row, week){
+      let cell = row.querySelector(`td.col-week[data-week="${week}"]`);
+      if(cell) return cell;
+      const tds = row.querySelectorAll('td.col-week');
+      return tds[week-1] || tds[0] || null;
+    }
+
+    // ===== Apply bucket to ALL columns at once (preload) =====
+    async function applyBucketAll(){
+      const bucket = await loadBucket(true);
+      const weeks = [1,2,3,4];
+      weeks.forEach(week=>{
+        const wk = bucket.weeks[String(week)] || { days_in_period: 7, data: [] };
+        const map = {};
+        (wk.data||[]).forEach(x=>{ map[x.sku] = { total:x.total, days:x.days }; });
+
+        // header status
+        const hdr = document.querySelector(`[data-wstatus="${week}"]`);
+        if(hdr){ hdr.textContent = `${wk.days_in_period||7}д`; }
+
+        // rows
+        Object.keys(ROW_INDEX).forEach(sku=>{
+          const row = ROW_INDEX[sku];
+          const weekCell = getWeekCell(row, week);
+          if(!weekCell) return;
+
+          const planWeek = Number(row.querySelector('.col-plan').textContent.trim()||0);
+          const perDay   = fillDayPlans(row);
+          const fact     = map[sku] || { total:0, days:[0,0,0,0,0,0,0] };
+
+          const facts = weekCell.querySelectorAll('.day-row .day-fact');
+          for(let i=0;i<7;i++){
+            if(facts[i]) facts[i].textContent = (fact.days[i]||0);
+            const box = facts[i]?.closest('.day-row');
+            if(box){
+              box.classList.remove('ok','lag');
+              if((fact.days[i]||0) >= perDay) box.classList.add('ok'); else box.classList.add('lag');
+            }
+          }
+          const pill = weekCell.querySelector('.pill.fact');
+          if(pill) pill.textContent = `факт — ${fact.total}`;
+          paintCellStatus(weekCell, fact.total, planWeek, Number(wk.days_in_period||7));
+        });
+      });
+    }
+
+    function setColumnOpen(week, open){
+      document.querySelectorAll(`td.col-week[data-week="${week}"]`).forEach(td=> td.classList.toggle('is-open', open));
+      const hbtn = document.querySelector(`.toggle-all[data-week="${week}"]`);
+      if(hbtn) hbtn.setAttribute('aria-pressed', String(open));
+    }
+
+    // UI wiring
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.toggle-all');
+      if(!btn) return;
+      const week = Number(btn.dataset.week);
+      const next = !(btn.getAttribute('aria-pressed')==='true');
+      setColumnOpen(week, next);
+    });
+
+    document.getElementById('btnOpenAll').addEventListener('click', ()=>{ [1,2,3,4].forEach(w=> setColumnOpen(w, true)); });
+    document.getElementById('btnCollapseAll').addEventListener('click', ()=>{ [1,2,3,4].forEach(w=> setColumnOpen(w, false)); });
+
+    // Presets
+    document.querySelectorAll('.cal-preset .chip').forEach(ch=>{
+      ch.addEventListener('click', ()=>{
+        const now = new Date();
+        const pre = ch.dataset.preset;
+        let s,e;
+        if(pre==='this-week'){ s=monday(now); e=new Date(monday(now)); e.setDate(e.getDate()+6); }
+        else if(pre==='prev-week'){ e=new Date(monday(now)); e.setDate(e.getDate()-1); s=monday(e); }
+        else if(pre==='last-7'){ e=new Date(now); s=new Date(now); s.setDate(s.getDate()-6); }
+        else if(pre==='month'){ e=new Date(now.getFullYear(), now.getMonth()+1, 0); s=new Date(now.getFullYear(), now.getMonth(), 1); }
+        else { s=''; e=''; }
+        document.getElementById('dateStart').value = s?fmt(s):'';
+        document.getElementById('dateEnd').value   = e?fmt(e):'';
+      });
+    });
+
+    // Apply period
+    document.getElementById('applyPeriod').addEventListener('click', async ()=>{
+      const s = document.getElementById('dateStart').value;
+      const e = document.getElementById('dateEnd').value;
+      const use = document.getElementById('usePeriod').checked;
+      Period.use = !!use; Period.start = s || null; Period.end = e || null; setStatus();
+      // reset cache & reload
+      BUCKET_CACHE['none'] = undefined;
+      if(Period.use && Period.start && Period.end){ BUCKET_CACHE[`${Period.start}..${Period.end}`] = undefined; }
+      await applyBucketAll();
+    });
+
+    // Refresh button: force reload
+    document.getElementById('btnRefresh').addEventListener('click', async ()=>{
+      BUCKET_CACHE['none'] = undefined;
+      const p = readPeriod();
+      if(p){ BUCKET_CACHE[`${p.start}..${p.end}`] = undefined; }
+      await applyBucketAll();
+    });
+
+    // Excel upload
+    const form = document.getElementById('uploadForm');
+    if(form){
+      form.addEventListener('change', async ()=>{
+        const input = form.querySelector('input[type=file]');
+        if(!input.files.length) return;
+        const fd = new FormData(form);
+        const res = await fetch("{% url 'bdds_upload' %}", { method:'POST', body: fd, headers: {'X-CSRFToken': getCookie('csrftoken')}});
+        const data = await res.json();
+        if(data.ok){ location.reload(); } else { alert(data.error || 'Ошибка загрузки'); }
+        input.value = '';
+      });
+    }
+
+    // INIT
+    (async function init(){
+      indexRows();
+      setStatus();
+      [1,2,3,4].forEach(w=> setColumnOpen(w, true)); // по умолчанию всё раскрыто
+      await applyBucketAll(); // и данные WB подтягиваются сразу
+    })();
+
+    function getCookie(name){
+      let v=null; if(document.cookie&&document.cookie!==''){
+        const cookies=document.cookie.split(';');
+        for(let i=0;i<cookies.length;i++){
+          const c=cookies[i].trim();
+          if(c.substring(0,name.length+1)===(name+'=')){ v=decodeURIComponent(c.substring(name.length+1)); break; }
+        }
+      } return v;
+    }
+  })();
+  </script>
+</body>
+</html>

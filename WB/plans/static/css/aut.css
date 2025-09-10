@@ -1,0 +1,193 @@
+/* === AUTH — стекло, ровные отступы, строгий центр === */
+
+:root{
+  --bg:#05080a; --text:#d8e6ea;
+  --green:#00e68c; --green-soft:#00e68c22;
+  --glass:#0c1216; --glass-border: rgba(106,247,228,.22);
+  --card-w: 440px;
+  --card-pad: 22px;
+  --radius: 16px;
+  --hdr-h: 56px;                 /* высота хедера для отступа сверху */
+}
+
+/* ===== БАЗОВЫЙ ЛЭЙАУТ (центрирует main, возвращает хедер/футер) ===== */
+
+html,body{ height:100% }
+body{
+  margin:0; color:var(--text); background:var(--bg);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  display:flex; flex-direction:column;
+  overflow-x:hidden;
+}
+
+/* фон и остальное живут в bg.css; тут только слойность */
+main{
+  position:relative; z-index:2;
+  padding-top: calc(var(--hdr-h) + 18px);
+  padding-bottom: 18px;
+  display:grid; place-items:center;   /* ← центрирование карточки */
+  flex:1;
+}
+
+/* Хедер */
+.site-header{
+  position:fixed; inset:0 0 auto 0; height:var(--hdr-h); z-index:5;
+  background: color-mix(in oklab, var(--bg) 55%, #0b1116 45% / 72%);
+  border-bottom:1px solid var(--glass-border);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+.site-header .wrap{
+  height:100%; width:min(1200px,92%); margin-inline:auto;
+  display:flex; align-items:center; gap:16px; padding:0 10px;
+}
+.brand{ text-decoration:none; color:var(--text); font-weight:900; letter-spacing:.6px; display:flex; align-items:center; gap:6px }
+.brand span{ color:var(--green); text-shadow:0 0 14px var(--green-soft) }
+.spacer{ flex:1 }
+.link{ color:#7fffd4; text-decoration:none; display:flex; gap:6px; align-items:center; opacity:.9 }
+.link:hover{ opacity:1; text-decoration:underline }
+
+/* Футер */
+.site-footer{
+  position:relative; z-index:2; margin-top: 12px;
+  border-top:1px solid var(--glass-border);
+  background: color-mix(in oklab, var(--bg) 62%, #0b1116 38% / 70%);
+  backdrop-filter: blur(8px);
+}
+.site-footer .wrap{
+  width:min(1200px,92%); margin-inline:auto; padding:12px 10px;
+  display:flex; justify-content:space-between; align-items:center; gap:12px;
+}
+.heart{ color:#ff7aa8; filter: drop-shadow(0 0 6px #ff7aa855) }
+
+/* ===== КАРТОЧКА АВТОРИЗАЦИИ ===== */
+.auth-card{
+  width: var(--card-w);
+  margin-inline:auto;                 /* fallback на случай, если main переопределят */
+  background: color-mix(in oklab, var(--glass) 72%, #000 / 30%);
+  border:1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 48px #000a, inset 0 0 24px var(--green-soft);
+  backdrop-filter: blur(14px) saturate(120%);
+  overflow:hidden;
+  transform: translateZ(0);
+  animation: floaty 7s ease-in-out infinite;
+}
+@keyframes floaty{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+.auth-card.tilt{ transition: transform .14s ease; transform-style: preserve-3d; }
+
+/* Вкладки */
+.tabs{
+  display:flex; gap:12px; justify-content:center; align-items:center;
+  padding:12px var(--card-pad);
+  border-bottom:1px solid var(--glass-border);
+  background: color-mix(in oklab, #091015 60%, #0b1116 40% / 58%);
+}
+.tab{
+  appearance:none; border:1px solid var(--glass-border);
+  background: color-mix(in oklab, var(--glass) 60%, #003b2a / 22%);
+  color:var(--text); padding:9px 14px; border-radius:12px;
+  cursor:pointer; display:flex; gap:8px; align-items:center;
+  transition: filter .2s, box-shadow .2s, color .2s, background .2s;
+}
+.tab:hover{ filter:brightness(1.06) }
+.tab.is-active{
+  color:var(--green);
+  box-shadow: 0 0 0 2px #00e68c22 inset, 0 0 22px #00e68c14 inset;
+  background: color-mix(in oklab, var(--glass) 70%, #003b2a / 16%);
+}
+
+/* Слайдер */
+.viewport{ position:relative; overflow:hidden }
+.track{
+  display:grid; grid-template-columns: 1fr 1fr;
+  width:200%; transform: translateX(0);
+  transition: transform .38s cubic-bezier(.25,.8,.25,1);
+}
+.mode-login .track{ transform: translateX(-50%) }
+
+/* Панели */
+:where(.panel){
+  padding: var(--card-pad);
+  display:flex; flex-direction:column; align-items:center; gap:18px;
+  min-height: 340px;
+}
+.panel h2{
+  margin: 4px 0 2px;
+  font-size:1.28rem; font-weight:900; letter-spacing:.3px;
+  text-align:center; text-shadow: 0 0 24px #00e68c28;
+}
+
+/* Формы и поля — фикс ширина, центр */
+.form{
+  width: 88%;
+  max-width: 360px;                 /* ровная ширина полей */
+  margin-inline:auto;
+  display:flex; flex-direction:column; gap:16px;
+}
+.fi{ width:100%; display:flex; flex-direction:column; gap:6px }
+.fi input{
+  height:46px;
+  width:90%;
+  padding:10px 14px;
+  border-radius:12px;
+  color:var(--text);
+  border:1px solid var(--glass-border);
+  background: color-mix(in oklab, var(--glass) 62%, #000 / 16%);
+  outline:none;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+.fi input::placeholder{ color:#9fb8b1; opacity:.88 }
+.fi input:focus{
+  border-color: color-mix(in oklab, var(--green) 60%, #fff 0%);
+  box-shadow: 0 0 0 3px #00e68c33, inset 0 0 16px #00e68c12;
+  background: color-mix(in oklab, var(--glass) 70%, #000 / 8%);
+}
+
+/* Кнопка — центр и на всю ширину формы */
+.actions{
+  width: 88%;
+  max-width: 360px;
+  margin: 2px auto 0;
+  display:flex; flex-direction:column; gap:14px; align-items:stretch;
+}
+.btn{
+  height:46px; width:100%;
+  border:0; border-radius:12px;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:0 16px; cursor:pointer; user-select:none; text-decoration:none;
+  color:#012016; font-weight:800; letter-spacing:.2px;
+  background: linear-gradient(180deg, #18f07d, #09d36a);
+  box-shadow: 0 10px 24px #00ff7a33, inset 0 1px 0 #ffffffaa;
+  transition: transform .12s, filter .15s, box-shadow .25s;
+}
+.btn:hover{ filter:brightness(1.05); transform: translateY(-1px) }
+.btn:active{ transform: translateY(0) }
+
+/* Ошибки — та же ширина, центр */
+.alert{
+  width: 88%;
+  max-width: 360px;
+  margin: 0 auto;
+  padding:10px 12px; border-radius:12px; font-size:.95rem;
+  background:#d84f4f18; border:1px solid #ff7b7b55; color:#ffdcdc;
+  box-shadow: inset 0 0 24px #ff5c5c12;
+}
+.alert.error ul{ margin:.2em 0 0 .9em; }
+
+/* Подсказки под формой (если нужны) */
+.form-note{
+  width: 88%;
+  max-width: 360px;
+  margin: 0 auto;
+  text-align:center; font-size:.94rem;
+}
+.form-note a{
+  color:#b98cff; text-decoration:none; border-bottom:1px dashed #b98cff55; padding-bottom:1px;
+}
+.form-note a:hover{ color:#d7b6ff; border-bottom-color:#d7b6ff99 }
+
+/* Мобилка */
+@media (max-width: 460px){
+  :root{ --card-w: 92vw; }
+  .panel{ min-height: 320px }
+}

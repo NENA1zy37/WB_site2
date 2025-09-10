@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  {% load static %}
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WB Ops · Панель</title>
+  <!-- Общие стили фона/сайта (как на главной) -->
+  <link rel="stylesheet" href="{% static 'css/bg.css' %}">
+  <link rel="stylesheet" href="{% static 'css/home.css' %}">
+  <!-- Стили этой страницы -->
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body>
+
+  <!-- BG -->
+  <div class="bg">
+    <canvas class="matrix-layer" data-depth="0.04"></canvas>
+    <canvas class="matrix-layer" data-depth="0.08"></canvas>
+    <canvas class="matrix-layer" data-depth="0.14"></canvas>
+    <div class="bg-overlay"></div>
+  </div>
+
+  <!-- Лэйаут -->
+  <div class="dash-root">
+    <!-- SIDEBAR -->
+    <aside class="dash-aside" id="dashAside">
+      <div class="aside-head">
+        <a class="brand" href="/">
+            <span class="wb">WB</span><span class="ops"> OPS</span>
+        </a>
+        <button class="aside-toggle" id="asideToggle" aria-label="Свернуть/развернуть"><i data-feather="sidebar"></i></button>
+      </div>
+
+      <nav class="aside-nav">
+        <a href="{% url 'bdds_page' %}"
+     class="nav-item"
+     title="BDDS">
+    <i data-feather="bar-chart-2"></i>
+    <span class="label">BDDS</span>
+  </a>
+  <a href="{% url 'unit_page' %}"
+   class="nav-item"
+   title="Юнит-экономика">
+  <i data-feather="percent"></i>
+  <span class="label">Юнит-Экономика</span>
+</a>
+        <a class="nav-item is-active" href="#"><i data-feather="grid"></i><span>Обзор</span></a>
+        <a class="nav-item" href="/ff/boxes/"><i data-feather="package"></i><span>Фулфилмент</span></a>
+        <a class="nav-item" href="/analytics/"><i data-feather="bar-chart-2"></i><span>Аналитика</span></a>
+        <a class="nav-item" href="/seo/"><i data-feather="type"></i><span>SEO / Карточки</span></a>
+        <a class="nav-item" href="/inventory/"><i data-feather="database"></i><span>Остатки</span></a>
+        <a class="nav-item" href="/settings/"><i data-feather="settings"></i><span>Настройки</span></a>
+      </nav>
+
+      <div class="aside-foot">
+        <a class="nav-item" href="/help/"><i data-feather="help-circle"></i><span>Справка</span></a>
+        <a class="nav-item" href="/accounts/logout/"><i data-feather="log-out"></i><span>Выйти</span></a>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="dash-main">
+      <!-- TOPBAR -->
+      <header class="dash-top">
+        <button class="burger" id="burgerBtn" aria-label="Меню"><i data-feather="menu"></i></button>
+        <div class="search">
+          <i data-feather="search"></i>
+          <input type="search" placeholder="Поиск по SKU, BOX, заказам…">
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" id="notifyBtn" title="Уведомления"><i data-feather="bell"></i></button>
+          <div class="user">
+            <div class="avatar" title="Профиль">AO</div>
+            <div class="menu">
+              <a href="/profile/"><i data-feather="user"></i> Профиль</a>
+              <a href="/accounts/logout/"><i data-feather="log-out"></i> Выйти</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- CONTENT -->
+      <main class="dash-content">
+        <!-- Приветствие + быстрые действия -->
+        <section class="glass card hero">
+          <div class="hero-text">
+            <h1>Добро пожаловать 👋</h1>
+            <p class="muted">Здесь собраны ключевые метрики и быстрые действия по ФФ, остаткам, аналитике и карточкам.</p>
+            <div class="actions">
+              <a class="btn" id="openBoxModal"><i data-feather="plus-circle"></i>Создать BOX</a>
+              <a class="btn btn-ghost" href="/analytics/"><i data-feather="activity"></i>Открыть аналитику</a>
+            </div>
+          </div>
+          <ul class="hero-stats">
+            <li><i data-feather="shopping-bag"></i><span class="kpi">128</span><small>заказов сегодня</small></li>
+            <li><i data-feather="package"></i><span class="kpi">42</span><small>BOX в работе</small></li>
+            <li><i data-feather="dollar-sign"></i><span class="kpi">1.3М</span><small>выручка, ₽</small></li>
+            <li><i data-feather="alert-triangle"></i><span class="kpi warn">5</span><small>алертов</small></li>
+          </ul>
+        </section>
+
+        <!-- KPI блоки -->
+        <section class="grid-4 kpis">
+          <article class="glass mini-kpi">
+            <header><i data-feather="truck"></i><span>Отгрузки</span></header>
+            <div class="val">+18%</div><small class="muted">к прошлой неделе</small>
+          </article>
+          <article class="glass mini-kpi">
+            <header><i data-feather="trending-up"></i><span>CTR карточек</span></header>
+            <div class="val">3.9%</div><small class="muted">A/B тест #21</small>
+          </article>
+          <article class="glass mini-kpi">
+            <header><i data-feather="target"></i><span>Маржа / SKU</span></header>
+            <div class="val">27%</div><small class="muted">топ-20 SKU</small>
+          </article>
+          <article class="glass mini-kpi">
+            <header><i data-feather="clock"></i><span>Оборачиваемость</span></header>
+            <div class="val">14д</div><small class="muted">средняя по складу</small>
+          </article>
+        </section>
+
+        <!-- Быстрые операции -->
+        <section class="glass card ops">
+          <h2>Операции</h2>
+          <div class="ops-grid">
+            <a class="quick" href="/ff/boxes/"><i data-feather="qr-code"></i><span>Скан-режим BOX</span></a>
+            <button class="quick" id="importBtn"><i data-feather="upload-cloud"></i><span>Импорт остатков (CSV/Excel)</span></button>
+            <a class="quick" href="/seo/"><i data-feather="edit-3"></i><span>SEO-шаблоны карточек</span></a>
+            <a class="quick" href="/analytics/"><i data-feather="bar-chart"></i><span>Юнит-экономика</span></a>
+          </div>
+        </section>
+
+        <!-- Лента событий + Таблица -->
+        <section class="grid-2">
+          <article class="glass card feed">
+            <h2>События</h2>
+            <ul class="timeline">
+              <li><span class="dot ok"></span><div><b>BOX #A-342</b> закрыт и передан на отгрузку</div><time>10:24</time></li>
+              <li><span class="dot warn"></span><div>Дефицит <b>SKU 117-BLK</b> — остаток &lt; 5</div><time>09:58</time></li>
+              <li><span class="dot"></span><div>Импорт продаж за вчера завершён</div><time>09:12</time></li>
+              <li><span class="dot ok"></span><div>A/B карточки <b>KM-Serum</b>: CTR +0.6 п.п.</div><time>08:40</time></li>
+            </ul>
+          </article>
+
+          <article class="glass card table-card">
+            <div class="table-head">
+              <h2>Открытые BOX</h2>
+              <div class="filters">
+                <input type="search" placeholder="Поиск по BOX / SKU…">
+                <select>
+                  <option>Все</option>
+                  <option>Open</option>
+                  <option>Closed</option>
+                  <option>Shipped</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>BOX</th><th>SKU</th><th>Штрихкод</th><th>Статус</th><th>Обновлён</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>A-342</td><td>117-BLK</td><td>2000012345678</td><td><span class="tag t-open">open</span></td><td>10:22</td></tr>
+                  <tr><td>A-340</td><td>221-GRN</td><td>2000012345612</td><td><span class="tag t-closed">closed</span></td><td>09:50</td></tr>
+                  <tr><td>A-339</td><td>991-SET</td><td>2000012345699</td><td><span class="tag t-ship">shipped</span></td><td>09:10</td></tr>
+                  <tr><td>A-338</td><td>117-BLK</td><td>2000012345688</td><td><span class="tag t-open">open</span></td><td>08:55</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </main>
+
+      <!-- FOOTER -->
+      <footer class="site-footer">
+        <div class="wrap">
+          <div><span>Создал с любовью</span> <span class="heart">❤️</span> <strong>A1zy</strong></div>
+          <a class="link" href="https://t.me/A1zy" target="_blank" rel="noopener"><i data-feather="send"></i><span>Мой Telegram</span></a>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- МОДАЛ Создать BOX -->
+  <div class="modal" id="boxModal" aria-hidden="true" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__dialog glass">
+      <div class="modal__head">
+        <h3><i data-feather="plus-circle"></i> Создать BOX</h3>
+        <button class="icon-btn" data-close aria-label="Закрыть"><i data-feather="x"></i></button>
+      </div>
+      <form class="modal__body">
+        <label class="fi"><span>Название</span><input type="text" placeholder="Напр. A-343" required></label>
+        <label class="fi"><span>Ожидаемое кол-во</span><input type="number" min="1" step="1" placeholder="Напр. 24"></label>
+        <div class="modal__actions">
+          <button type="button" class="btn btn-ghost" data-close>Отмена</button>
+          <button type="submit" class="btn">Создать</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast" hidden><i data-feather="check-circle"></i><span>Готово</span></div>
+ <script src="{%statik 'js/bd.js%'}"></script>
+  <!-- Иконки и поведение -->
+  <script>
+  // Иконки Feather (если используешь)
+  if (window.feather) feather.replace({ class: 'i' });
+
+  // ===== Панель слева: коллапс / бургер =====
+  const aside = document.getElementById('dashAside');
+  const root  = document.querySelector('.dash-root');
+  const asideToggleBtn = document.getElementById('asideToggle');
+  const burgerBtn      = document.getElementById('burgerBtn');
+
+  // Переключение коллапса: и на .dash-root, и на aside (совместимость)
+  asideToggleBtn?.addEventListener('click', () => {
+    root.classList.toggle('is-collapsed');
+    aside.classList.toggle('is-collapsed');
+  });
+
+  // Мобильный «выдвижной» сайдбар
+  burgerBtn?.addEventListener('click', () => {
+    aside.classList.toggle('is-open');
+  });
+
+  // При загрузке на узких экранах — сразу коллапс
+  if (window.matchMedia('(max-width: 980px)').matches) {
+    root.classList.add('is-collapsed');
+    aside.classList.add('is-collapsed');
+  }
+
+  // ===== Дропдаун профиля =====
+  const user = document.querySelector('.user');
+  user?.addEventListener('click', () => user.classList.toggle('open'));
+  document.addEventListener('click', (e)=>{
+    if (!user) return;
+    if (!e.target.closest('.user')) user.classList.remove('open');
+  });
+
+  // ===== Модал «Создать BOX» =====
+  const boxModal = document.getElementById('boxModal');
+  const openBox  = document.getElementById('openBoxModal');
+  const toast    = document.getElementById('toast');
+
+  function openModal(m){
+    if (!m) return;
+    m.hidden = false;
+    requestAnimationFrame(()=>{ m.classList.add('is-open'); m.setAttribute('aria-hidden','false'); });
+  }
+  function closeModal(m){
+    if (!m) return;
+    m.classList.remove('is-open'); m.setAttribute('aria-hidden','true');
+    setTimeout(()=> m.hidden = true, 180);
+  }
+  function showToast(text){
+    if (!toast) return;
+    toast.querySelector('span').textContent = text || 'Готово';
+    toast.hidden = false;
+    requestAnimationFrame(()=> toast.classList.add('show'));
+    setTimeout(()=>{ toast.classList.remove('show'); setTimeout(()=> toast.hidden = true, 200); }, 2000);
+  }
+
+  openBox?.addEventListener('click', ()=> openModal(boxModal));
+  boxModal?.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', ()=> closeModal(boxModal)));
+  boxModal?.addEventListener('click', (e)=>{ if (e.target.dataset.close !== undefined) closeModal(boxModal); });
+  boxModal?.querySelector('form')?.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    closeModal(boxModal);
+    showToast('BOX создан');
+  });
+
+  // Кнопка уведомлений как пример тоста
+  document.getElementById('notifyBtn')?.addEventListener('click', ()=> showToast('Нет новых уведомлений'));
+</script>
+</body>
+</html>

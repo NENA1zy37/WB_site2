@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  {% load static %}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WB Ops · Вход / Регистрация</title>
+
+  <!-- Иконки -->
+  <script src="https://unpkg.com/feather-icons"></script>
+
+  <!-- Стили -->
+  <link rel="icon" href="{% static 'favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'css/bg.css' %}">
+  <link rel="stylesheet" href="{% static 'css/aut.css' %}">
+</head>
+<body>
+  <!-- ===== ФОН ===== -->
+  <div class="bg">
+    <canvas class="matrix-layer" data-depth="0.04"></canvas>
+    <canvas class="matrix-layer" data-depth="0.08"></canvas>
+    <canvas class="matrix-layer" data-depth="0.14"></canvas>
+    <div class="bg-overlay"></div>
+  </div>
+
+  <!-- ===== ХЕДЕР ===== -->
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="{% url 'index' %}"><span>WB</span> OPS</a>
+      <div class="spacer"></div>
+      <a class="link" href="{% url 'index' %}"><i data-feather="arrow-left"></i><span>На главную</span></a>
+    </div>
+  </header>
+
+  <!-- ===== КОНТЕНТ ===== -->
+  <main>
+    <div class="auth-card tilt mode-login" id="authCard">
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab is-active" data-mode="signup" type="button">
+          <i data-feather="log-in"></i><span>Вход</span>
+        </button>
+        <button class="tab" data-mode="login" type="button">
+          <i data-feather="user-plus"></i><span>Регистрация</span>
+        </button>
+      </div>
+
+      <!-- Slider viewport -->
+      <div class="viewport">
+        <div class="track">
+          <!-- ===== ВХОД ===== -->
+          <section class="panel panel-login">
+            <h2>Вход</h2>
+            <form method="post" action="{% url 'login' %}" class="form" novalidate>
+              {% csrf_token %}
+
+              {% if form.errors %}
+                <div class="alert error">{{ form.errors }}</div>
+              {% endif %}
+
+              <div class="fi">
+                <input id="login-username" type="text" name="username"
+                       placeholder="Логин" autocomplete="username" required>
+              </div>
+              <div class="fi">
+                <input id="login-password" type="password" name="password"
+                       placeholder="Пароль" autocomplete="current-password" required>
+              </div>
+
+              <input type="hidden"
+                name="{{ redirect_field_name|default:'next' }}"
+                value="{{ redirect_field_value|default:'' }}">
+
+              <div class="actions">
+                <button class="btn" type="submit">
+                  <i data-feather="log-in"></i><span>Войти</span>
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- ===== РЕГИСТРАЦИЯ ===== -->
+          <section class="panel panel-signup">
+            <h2>Регистрация</h2>
+            <form method="post" action="{% url 'register' %}" class="form" novalidate>
+              {% csrf_token %}
+
+              {% if form.non_field_errors %}
+                <div class="alert error">{{ form.non_field_errors }}</div>
+              {% endif %}
+
+              <div class="fi">
+                <input id="su-username" type="text" name="username"
+                       placeholder="Логин" autocomplete="username" required>
+              </div>
+              <div class="fi">
+                <input id="su-password1" type="password" name="password1"
+                       placeholder="Пароль" autocomplete="new-password" minlength="8" required>
+              </div>
+              <div class="fi">
+                <input id="su-password2" type="password" name="password2"
+                       placeholder="Повтор пароля" autocomplete="new-password" minlength="8" required>
+              </div>
+
+              <div class="actions">
+                <button class="btn" type="submit">
+                  <i data-feather="user-plus"></i><span>Зарегистрироваться</span>
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== ФУТЕР ===== -->
+  <footer class="site-footer">
+    <div class="wrap">
+      <div><span>Создал с любовью</span> <span class="heart">❤️</span> <strong>A1zy</strong></div>
+      <a class="link" href="https://t.me/A1zy" target="_blank" rel="noopener">
+        <i data-feather="send"></i><span>Мой Telegram</span>
+      </a>
+    </div>
+  </footer>
+
+  <!-- ===== Скрипты страницы ===== -->
+  <script>
+    // Иконки
+    feather.replace({ class: 'i' });
+
+    // Tabs / режим
+    const card = document.getElementById('authCard');
+    const tabs = document.querySelectorAll('.tab, [data-mode]');
+    function setMode(mode){
+      card.classList.toggle('mode-login',  mode === 'login');
+      card.classList.toggle('mode-signup', mode === 'signup');
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('is-active', t.dataset.mode === mode));
+      const focusId = (mode === 'login') ? 'login-username' : 'su-username';
+      const el = document.getElementById(focusId);
+      if (el) el.focus({ preventScroll: true });
+      if (location.hash !== '#' + mode) history.replaceState(null, '', '#' + mode);
+    }
+    document.addEventListener('click', (e)=>{
+      const t = e.target.closest('[data-mode]');
+      if (!t) return;
+      e.preventDefault();
+      setMode(t.dataset.mode);
+    });
+    // начальный режим из hash
+    (()=>{
+      const h = (location.hash || '').replace('#','');
+      setMode(h === 'signup' ? 'signup' : 'login');
+    })();
+
+    // Card tilt (лёгкий 3D)
+    (()=>{
+      const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+      let raf = 0;
+      card.addEventListener('mousemove', (e)=>{
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(()=>{
+          const r = card.getBoundingClientRect();
+          const dx = (e.clientX - (r.left + r.width/2)) / r.width;
+          const dy = (e.clientY - (r.top  + r.height/2)) / r.height;
+          const rx = clamp(dy, -0.5, 0.5) * -10;
+          const ry = clamp(dx, -0.5, 0.5) *  10;
+          card.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+        });
+      });
+      card.addEventListener('mouseleave', ()=> card.style.transform = '');
+    })();
+  </script>
+
+  <!-- ===== Фон "Матрица" ===== -->
+  <script>
+    (()=> {
+      const layers = Array.from(document.querySelectorAll('.matrix-layer'));
+      if (!layers.length) return;
+      const chars = 'アイウエオカキクケコｱｲｳｴｵ01{}[]<>+-*/=0123456789ABCDEF';
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      const palette = { base:{r:0,g:230,b:140}, flare:{r:255,g:247,b:189} };
+      const rand=(a,b)=>Math.random()*(b-a)+a, pick=s=>s[(Math.random()*s.length)|0];
+
+      function Layer(cv){
+        this.cv=cv; this.ctx=cv.getContext('2d');
+        this.depth=parseFloat(cv.dataset.depth||'0.08');
+        this.columns=0; this.fontSize=18; this.drops=[]; this.time=0;
+        this.resize();
+      }
+      Layer.prototype.resize=function(){
+        const {cv,ctx}=this, w=cv.clientWidth*dpr, h=cv.clientHeight*dpr;
+        if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr,dpr); }
+        this.fontSize=Math.max(14, Math.round(Math.min(window.innerWidth, window.innerHeight)/50));
+        ctx.font=`${this.fontSize}px ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace`;
+        this.columns=Math.ceil(cv.clientWidth/this.fontSize);
+        this.drops=Array.from({length:this.columns},()=>rand(-40,0));
+      };
+      Layer.prototype.step=function(dt){
+        const {cv,ctx,fontSize,columns,drops,depth}=this; this.time+=dt;
+        ctx.fillStyle='rgba(0,0,0,0.08)'; ctx.fillRect(0,0,cv.clientWidth,cv.clientHeight);
+        for(let i=0;i<columns;i++){
+          const x=i*fontSize+2, y=(drops[i]*fontSize);
+          const flare=Math.random()<0.05;
+          const flick=0.85+Math.sin((this.time*2+i)*0.7)*0.15;
+          const c=flare?palette.flare:palette.base;
+          const bright=0.75+Math.random()*0.25;
+          const r=Math.min(255,c.r*bright*flick), g=Math.min(255,c.g*bright*flick), b=Math.min(255,c.b*bright*flick);
+          ctx.fillStyle=`rgba(${r|0},${g|0},${b|0},0.95)`;
+          ctx.fillText(pick(chars),x,y);
+          if(y>cv.clientHeight && Math.random()>0.975){ drops[i]=rand(-20,-2); }
+          else { drops[i]+=(0.2 + depth*2); }
+        }
+      };
+      const inst=layers.map(c=>new Layer(c));
+      const ro=new ResizeObserver(()=>inst.forEach(i=>i.resize())); ro.observe(document.body);
+      window.addEventListener('mousemove',e=>{
+        const cx=innerWidth/2, cy=innerHeight/2;
+        const moveX=(e.clientX-cx)/innerWidth, moveY=(e.clientY-cy)/innerHeight;
+        layers.forEach(cv=>{
+          const d=parseFloat(cv.dataset.depth||'0.08');
+          cv.style.transform=`translate3d(${moveX*d*18}px, ${moveY*d*22}px, 0)`;
+        });
+      },{passive:true});
+      window.addEventListener('scroll',()=>{
+        const sy=scrollY;
+        layers.forEach(cv=>{
+          const d=parseFloat(cv.dataset.depth||'0.08');
+          cv.style.transform=`translate3d(0, ${-sy*d*0.25}px, 0)`;
+        });
+      },{passive:true});
+      let last=performance.now();
+      const loop=now=>{
+        const dt=Math.min(0.05,(now-last)/1000); last=now;
+        inst.forEach(i=>i.step(dt)); requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

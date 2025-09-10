@@ -1,0 +1,19 @@
+/* Базовые переменные/ресет для проекта */
+:root{
+  --bg: #0f1115;
+  --panel: #171a21;
+  --muted: #9aa3b2;
+  --text: #e7eaf0;
+  --accent: #46d19a;
+  --border: #2a2f3a;
+}
+*{ box-sizing: border-box; }
+html, body{ height:100%; }
+body{ margin:0; background:var(--bg); color:var(--text); font:14px/1.45 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+
+h1,h2,h3,h4{ margin:0 0 8px; }
+button{ font:inherit; }
+
+/* Утилиты */
+.container{ max-width:1200px; margin:0 auto; padding:0 16px; }
+.hidden{ display:none; }

@@ -1,0 +1,116 @@
+:root{
+  --bg:#05080a; --turq:#35e4d1; --turq-soft:#35e4d11a; --yellow-soft:#fff7bd;
+  --panel: color-mix(in oklab, var(--bg) 85%, #0d1117 15%);
+  --border:#1b2a2f; --text:#d8e6ea;
+  --glass: color-mix(in oklab, var(--panel) 70%, #0f1318 30%);
+  --glass-border: color-mix(in oklab, #6af7e4 15%, transparent);
+  --glass-blur:14px;
+  --header-h:64px;
+}
+
+/* Base */
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  overflow-x:hidden;
+}
+
+/* === BACKGROUND LAYERS (ниже контента) === */
+.bg{ position:fixed; inset:0; z-index:0; pointer-events:none; }
+.matrix-layer{
+  position:absolute; inset:0; width:100%; height:100%; display:block;
+  filter: drop-shadow(0 0 2px var(--turq-soft)); will-change: transform, opacity; z-index:0;
+}
+.bg-overlay{
+  position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(1200px 800px at 80% -10%, #00ffd0 0%, transparent 60%),
+    radial-gradient(800px 600px at 10% 120%, #00ffff22 0%, transparent 60%),
+    linear-gradient(180deg, #0000, #0006 65%, #000a 100%);
+  mix-blend-mode: screen; opacity:.35;
+}
+
+/* === CONTENT (выше фона) === */
+.app{ position:relative; z-index:10; isolation:isolate; }
+
+/* Старый .nav глушим (используем .site-header) */
+.nav{ position: static; background: transparent; border:0; padding:0; z-index:auto; }
+
+/* Glass cards */
+.glass{
+  background: color-mix(in oklab, var(--glass) 78%, #000 22% / 58%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+  border:1px solid var(--glass-border);
+  box-shadow: 0 10px 30px #0008, inset 0 1px 0 #ffffff0f, inset 0 0 40px #35e4d105;
+  border-radius:20px;
+}
+.card{ padding:24px; margin:36px auto; max-width:1000px; }
+
+/* Container */
+.container{ width:min(1200px, 92%); margin-inline:auto; padding:16px; }
+
+/* Fancy button (для регистрации/входа) */
+a.btn-burst {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: bold;
+  color: white;
+  background-color: #00ffff22;
+  padding: 1em 2em;
+  border-radius: .6rem;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  text-decoration: none;
+  display: inline-block;
+  line-height: 0.3;
+}
+
+a.btn-burst span:not(:nth-child(6)) {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 20px;
+  width: 20px;
+  background-color: #00e68c; /* зелёные круги под матричный стиль */
+  border-radius: 50%;
+  transition: .4s ease;
+  z-index: 1;
+}
+
+a.btn-burst span:nth-child(6) {
+  position: relative;
+  z-index: 2;
+}
+
+a.btn-burst span:nth-child(1) {
+  transform: translate(-3.3em, -4em);
+}
+
+a.btn-burst span:nth-child(2) {
+  transform: translate(-6em, 1.3em);
+}
+
+a.btn-burst span:nth-child(3) {
+  transform: translate(-.2em, 1.8em);
+}
+
+a.btn-burst span:nth-child(4) {
+  transform: translate(3.5em, 1.4em);
+}
+
+a.btn-burst span:nth-child(5) {
+  transform: translate(3.5em, -3.8em);
+}
+
+a.btn-burst:hover span:not(:nth-child(6)) {
+  transform: translate(-50%, -50%) scale(6);
+  transition: 1s ease;
+}
+
+/* Доп. отступы между блоками */
+.section{ margin-block: 30px; }
+
+/* Якоря под fixed-шапку */
+.hero, .section, [id]{ scroll-margin-top: calc(var(--header-h) + 10px); }

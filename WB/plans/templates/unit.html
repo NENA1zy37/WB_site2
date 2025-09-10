@@ -1,0 +1,429 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Unit-экономика — WB Ops</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="{% static 'css/index.css' %}">
+  <link rel="stylesheet" href="{% static 'css/BDDS.css' %}">
+  <link rel="stylesheet" href="{% static 'css/unit.css' %}">
+
+  <script defer src="https://unpkg.com/feather-icons"></script>
+</head>
+<body class="b-stage">
+
+  <header class="dash-hdr glass">
+    <div class="hdr-left">
+      <div class="brand">WB Ops</div>
+      <div class="hdr-sub">Unit-экономика по SKU · профили категорий</div>
+    </div>
+    <div class="hdr-right btns-row">
+      <a class="btn ghost" href="{% url 'dashboard' %}"><i data-feather="layout"></i> Дэшборд</a>
+      <a class="btn ghost" href="{% url 'bdds_page' %}"><i data-feather="bar-chart-2"></i> BDDS</a>
+    </div>
+  </header>
+
+  <main class="bdds-layout">
+    <!-- ЛЕВО -->
+    <section class="left-col">
+
+      <!-- Менеджер профилей категорий -->
+      <div class="glass unit-profiles">
+        <div class="table-head">
+          <div class="table-title"><i data-feather="layers"></i> Профили категорий</div>
+          <div class="btns-row">
+            <button class="btn" id="addProfile"><i data-feather="plus"></i> Профиль</button>
+            <button class="btn" id="saveProfiles"><i data-feather="save"></i> Сохранить</button>
+            <button class="btn ghost" id="resetProfiles"><i data-feather="rotate-ccw"></i> Сброс</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tbl profiles">
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th class="num">WB, %</th>
+                <th class="num">Налог, %</th>
+                <th class="num">ACOS, %</th>
+                <th class="num">Логистика, ₽</th>
+                <th class="num">Хранение, ₽</th>
+                <th class="num">Возвраты, ₽</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="profilesBody"><tr><td colspan="8" class="muted">Загружаю…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Таблица SKU -->
+      <div class="table-card glass">
+        <div class="table-head">
+          <div class="table-title"><i data-feather="grid"></i> Таблица SKU</div>
+          <div class="btns-row">
+            <button class="btn" id="addRow"><i data-feather="plus"></i> Строка</button>
+            <button class="btn ghost" id="clearRows"><i data-feather="trash-2"></i> Очистить</button>
+            <button class="btn ghost" id="exportCsv"><i data-feather="download"></i> Экспорт CSV</button>
+            <label class="btn ghost filebtn">
+              <i data-feather="upload"></i> Импорт CSV
+              <input type="file" id="importCsv" accept=".csv" hidden>
+            </label>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tbl unit">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Название</th>
+                <th>Профиль</th>
+                <th class="num">Цена, ₽</th>
+                <th class="num">Себестоим., ₽</th>
+                <th class="num">Кол-во/мес</th>
+                <th class="num">ACOS, %<br><span class="th-sub">пусто = по профилю</span></th>
+                <th class="num">Лог/Хр/Возв, ₽<br><span class="th-sub">через «/» или пусто</span></th>
+                <th class="num">Прибыль/ед., ₽</th>
+                <th class="num">Маржа, %</th>
+                <th class="num">Прибыль/мес., ₽</th>
+                <th class="num">Безуб. цена, ₽</th>
+                <th class="num">Безуб. ACOS, %</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="rowsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ПРАВО: KPI -->
+    <aside class="right-col">
+      <div class="kpi-card glass">
+        <div class="kpi-title">Итого прибыль/мес.</div>
+        <div class="kpi-value" id="k_totalProfit">—</div>
+      </div>
+      <div class="kpi-card glass">
+        <div class="kpi-title">Средняя маржа</div>
+        <div class="kpi-value" id="k_avgMargin">—%</div>
+      </div>
+      <div class="notes glass">
+        <div class="chart-title"><i data-feather="alert-circle"></i> Замечания</div>
+        <ul id="notesList" class="notes-list">
+          <li class="muted">Нет замечаний</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    window.UNIT_PROFILES_DEFAULT = {{ profiles|safe }};
+
+    (function(){
+  // ===== Helpers =====
+  const fmtMoney = n => (n==null||isNaN(n)) ? '—' : new Intl.NumberFormat('ru-RU').format(Math.round(n));
+  const fmtPct   = n => (n==null||isNaN(n)) ? '—' : Math.round(n);
+  const qs = s => document.querySelector(s);
+
+  // ===== Profiles state =====
+  let profiles = [];
+  const profilesKey = 'unit_profiles_v2';
+  const rowsKey = 'unit_rows_v2';
+
+  // Load defaults → localStorage override
+  function loadProfiles(){
+    const saved = localStorage.getItem(profilesKey);
+    if (saved) {
+      try { profiles = JSON.parse(saved); return; } catch{}
+    }
+    profiles = (window.UNIT_PROFILES_DEFAULT || []).map(p => ({...p}));
+  }
+  function saveProfiles(){
+    localStorage.setItem(profilesKey, JSON.stringify(profiles));
+  }
+
+  // ===== Rows state =====
+  let rows = []; // {id, sku, name, profileId, price, cogs, qty, acosOv, logOv, strOv, retOv}
+  function loadRows(){
+    const saved = localStorage.getItem(rowsKey);
+    if (saved) { try { rows = JSON.parse(saved); } catch{} }
+    if (!Array.isArray(rows)) rows = [];
+    if (!rows.length) rows.push(blankRow());
+  }
+  function saveRows(){ localStorage.setItem(rowsKey, JSON.stringify(rows)); }
+  const newId = () => Math.random().toString(36).slice(2);
+  const blankRow = () => ({ id:newId(), sku:'', name:'', profileId: profiles[0]?.id || '', price:0, cogs:0, qty:0, acosOv:'', logOv:'', strOv:'', retOv:'' });
+
+  // ===== DOM =====
+  const bodyRows = qs('#rowsBody');
+  const bodyProfiles = qs('#profilesBody');
+
+  // ===== Calc per row =====
+  function getProfile(id){ return profiles.find(p=>p.id===id) || profiles[0]; }
+  function parseTriplet(s){
+    // "100/5/10" -> {log:100, str:5, ret:10}
+    if (!s || typeof s!=='string') return {};
+    const parts = s.split('/').map(x=>+x.trim());
+    return { log: +parts[0]||undefined, str: +parts[1]||undefined, ret: +parts[2]||undefined };
+  }
+  function calcRow(r){
+    const P = +r.price || 0, C = +r.cogs || 0, Q = +r.qty || 0;
+    const prof = getProfile(r.profileId) || {};
+    const WB = +prof.wb_rate || 0, TAX = +prof.tax_rate || 0;
+    const AC = (r.acosOv !== '' && !isNaN(+r.acosOv)) ? (+r.acosOv/100) : (+prof.acos || 0);
+
+    const t = parseTriplet(r.logOv + (r.strOv||r.retOv ? `/${r.strOv||''}/${r.retOv||''}` : '')); // backward compat
+    const LOG = (t.log!=null) ? +t.log : (+prof.logistics || 0);
+    const STR = (t.str!=null) ? +t.str : (+prof.storage || 0);
+    const RET = (t.ret!=null) ? +t.ret : (+prof.returns || 0);
+
+    const FIX = LOG + STR + RET;
+
+    const feeWB = P * WB;
+    const ad    = P * AC;
+    const tax   = P * TAX;
+
+    const profitUnit  = P - C - feeWB - ad - tax - FIX;
+    const margin      = P>0 ? profitUnit / P : 0;
+    const profitMonth = profitUnit * Q;
+
+    const denom = 1 - (WB + AC + TAX);
+    const breakevenPrice = denom>0 ? (C + FIX) / denom : NaN;
+    const breakevenAcos  = P>0 ? (1 - (C + FIX)/P - WB - TAX) : NaN;
+
+    return { profitUnit, margin, profitMonth, breakevenPrice, breakevenAcos, WB, TAX, AC, LOG, STR, RET };
+  }
+
+  // ===== Render Profiles =====
+  function renderProfiles(){
+    if (!profiles.length) profiles.push({
+      id:'default', name:'По умолчанию', wb_rate:0.25, tax_rate:0.04, acos:0.1, logistics:100, storage:5, returns:10
+    });
+    bodyProfiles.innerHTML = profiles.map(p => `
+      <tr data-id="${p.id}">
+        <td><input class="w180" name="name" value="${p.name||''}" placeholder="Название"></td>
+        <td class="num"><input class="num w70" name="wb_rate"  type="number" step="0.1" min="0" max="100" value="${(p.wb_rate*100).toFixed(1)}"></td>
+        <td class="num"><input class="num w70" name="tax_rate" type="number" step="0.1" min="0" max="100" value="${(p.tax_rate*100).toFixed(1)}"></td>
+        <td class="num"><input class="num w70" name="acos"     type="number" step="0.1" min="0" max="100" value="${(p.acos*100).toFixed(1)}"></td>
+        <td class="num"><input class="num w90" name="logistics" type="number" step="1" min="0" value="${(p.logistics||0)}"></td>
+        <td class="num"><input class="num w90" name="storage"   type="number" step="1" min="0" value="${(p.storage||0)}"></td>
+        <td class="num"><input class="num w90" name="returns"   type="number" step="1" min="0" value="${(p.returns||0)}"></td>
+        <td class="num"><button class="btn ghost delProfile" title="Удалить профиль"><i data-feather="x"></i></button></td>
+      </tr>
+    `).join('');
+    bodyProfiles.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('input', onProfileInput);
+    });
+    bodyProfiles.querySelectorAll('.delProfile').forEach(btn => {
+      btn.addEventListener('click', onDelProfile);
+    });
+    if (window.feather) feather.replace({});
+  }
+  function onProfileInput(e){
+    const tr = e.target.closest('tr[data-id]'); if (!tr) return;
+    const id = tr.dataset.id;
+    const p = profiles.find(x=>x.id===id); if (!p) return;
+    const name = e.target.name;
+    let val = e.target.value;
+    if (name==='name'){ p.name = val; }
+    else if (['wb_rate','tax_rate','acos'].includes(name)){ p[name] = Math.max(0, (+val||0)/100); }
+    else { p[name] = Math.max(0, +val||0); }
+    saveProfiles();
+    renderRows(false); // чтобы селекты профилей оставались актуальны
+  }
+  function onDelProfile(e){
+    const tr = e.currentTarget.closest('tr[data-id]');
+    const id = tr.dataset.id;
+    if (profiles.length<=1){ alert('Нельзя удалить последний профиль'); return; }
+    profiles = profiles.filter(p=>p.id!==id);
+    // Перебросим строки на первый профиль
+    const fallback = profiles[0].id;
+    rows.forEach(r=>{ if (r.profileId===id) r.profileId=fallback; });
+    saveProfiles(); saveRows();
+    renderProfiles(); renderRows();
+  }
+
+  // ===== Render Rows =====
+  function profileOptions(selectedId){
+    return profiles.map(p => `<option value="${p.id}" ${p.id===selectedId?'selected':''}>${p.name}</option>`).join('');
+  }
+  function renderRows(rebuild=true){
+    if (rebuild){
+      bodyRows.innerHTML = rows.map(r => {
+        const k = calcRow(r);
+        return `
+          <tr data-id="${r.id}">
+            <td><input name="sku"  value="${r.sku||''}" placeholder="SKU"></td>
+            <td><input name="name" value="${r.name||''}" placeholder="Название"></td>
+            <td>
+              <select name="profileId" class="w160">
+                ${profileOptions(r.profileId)}
+              </select>
+            </td>
+            <td class="num"><input class="num w90" name="price" type="number" min="0" step="1" value="${r.price}"></td>
+            <td class="num"><input class="num w90" name="cogs"  type="number" min="0" step="1" value="${r.cogs}"></td>
+            <td class="num"><input class="num w90" name="qty"   type="number" min="0" step="1" value="${r.qty}"></td>
+
+            <td class="num">
+              <input class="num w70" name="acosOv" type="number" min="0" step="0.1" placeholder="—" value="${r.acosOv ?? ''}">
+            </td>
+            <td class="num">
+              <input class="num w120" name="triplet" placeholder="100/5/10" value="${tripletValue(r)}">
+            </td>
+
+            <td class="num ${k.profitUnit>=0?'pos':'neg'}">${fmtMoney(k.profitUnit)}</td>
+            <td class="num ${k.margin>=0.3?'pos':(k.margin<0?'neg':'')}">${fmtPct(k.margin*100)}</td>
+            <td class="num ${k.profitMonth>=0?'pos':'neg'}">${fmtMoney(k.profitMonth)}</td>
+            <td class="num">${isFinite(k.breakevenPrice)?fmtMoney(k.breakevenPrice):'∞'}</td>
+            <td class="num">${isFinite(k.breakevenAcos)?fmtPct(k.breakevenAcos*100):'—'}</td>
+            <td class="num"><button class="btn ghost delRow" title="Удалить"><i data-feather="x"></i></button></td>
+          </tr>
+        `;
+      }).join('');
+      bodyRows.querySelectorAll('input,select').forEach(inp => inp.addEventListener('input', onRowInput));
+      bodyRows.querySelectorAll('.delRow').forEach(b => b.addEventListener('click', (e)=> delRow(e)));
+      if (window.feather) feather.replace({});
+    }
+
+    // KPI summary
+    let totalProfit = 0, sumMargin=0, cnt=0;
+    rows.forEach(r=>{
+      const k = calcRow(r);
+      totalProfit += k.profitMonth || 0;
+      if (isFinite(k.margin)) { sumMargin += k.margin; cnt++; }
+    });
+    qs('#k_totalProfit').textContent = fmtMoney(totalProfit) + ' ₽';
+    qs('#k_avgMargin').textContent   = cnt? fmtPct(sumMargin/cnt*100)+'%':'—';
+
+    // Notes
+    const notes = [];
+    const bad = profiles.filter(p => (p.wb_rate + p.acos + p.tax_rate) >= 1);
+    if (bad.length) notes.push('В некоторых профилях сумма ставок ≥ 100% — безубыточная цена не вычисляется.');
+    if (!rows.length) notes.push('Добавьте хотя бы одну строку SKU.');
+    qs('#notesList').innerHTML = notes.length
+      ? notes.map(t=>`<li><i data-feather="info"></i><span>${t}</span></li>`).join('')
+      : `<li class="muted">Нет замечаний</li>`;
+    if (window.feather) feather.replace({});
+  }
+  function tripletValue(r){
+    // В UI хранится одной строкой; в state — тоже одной строкой (triplet), для совместимости оставляем поля logOv/strOv/retOv
+    if (r.triplet) return r.triplet;
+    if (r.logOv || r.strOv || r.retOv) {
+      const a = [r.logOv||'', r.strOv||'', r.retOv||''];
+      return a.join('/');
+    }
+    return '';
+  }
+
+  function onRowInput(e){
+    const tr = e.target.closest('tr[data-id]'); if (!tr) return;
+    const id = tr.dataset.id;
+    const row = rows.find(x=>x.id===id); if (!row) return;
+    const name = e.target.name;
+    let val = e.target.value;
+
+    if (name==='sku' || name==='name'){
+      row[name] = val;
+    } else if (name==='profileId'){
+      row.profileId = val;
+    } else if (name==='triplet'){
+      row.triplet = val;
+      const t = parseTriplet(val);
+      row.logOv = (t.log!=null)? t.log : '';
+      row.strOv = (t.str!=null)? t.str : '';
+      row.retOv = (t.ret!=null)? t.ret : '';
+    } else if (name==='acosOv'){
+      row.acosOv = val; // % строкой — пусто = по профилю
+    } else {
+      row[name] = +val || 0;
+    }
+    saveRows();
+    renderRows(); // пересчёт
+  }
+  function delRow(e){
+    const tr = e.currentTarget.closest('tr[data-id]');
+    const id = tr.dataset.id;
+    rows = rows.filter(r=>r.id!==id);
+    saveRows();
+    renderRows();
+  }
+
+  // ===== Toolbar actions =====
+  qs('#addRow').addEventListener('click', ()=> { rows.push(blankRow()); saveRows(); renderRows(); });
+  qs('#clearRows').addEventListener('click', ()=>{
+    if (confirm('Очистить все строки?')) { rows = []; saveRows(); renderRows(); }
+  });
+
+  // CSV Export / Import
+  qs('#exportCsv').addEventListener('click', ()=>{
+    const header = ['SKU','Название','Профиль','Цена','Себестоимость','Кол-во/мес','ACOS% (override)','Лог/Хр/Возв (override)','Прибыль/ед.','Маржа%','Прибыль/мес','Безуб. цена','Безуб. ACOS%'];
+    const data = rows.map(r=>{
+      const k = calcRow(r);
+      return [
+        r.sku, r.name, r.profileId, r.price, r.cogs, r.qty,
+        (r.acosOv ?? ''), tripletValue(r),
+        Math.round(k.profitUnit), Math.round(k.margin*100),
+        Math.round(k.profitMonth), Math.round(k.breakevenPrice||0), Math.round((k.breakevenAcos||0)*100)
+      ];
+    });
+    const csv = [header].concat(data).map(a=>a.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'unit_economics_profiles.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  qs('#importCsv').addEventListener('change', (e)=>{
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const lines = String(reader.result).split(/\r?\n/).filter(Boolean);
+        const out = [];
+        for (let i=1;i<lines.length;i++){
+          const cols = lines[i].split(';').map(s=>s.replace(/^"|"$/g,'').replace(/""/g,'"'));
+          const [sku,name,profileId,price,cogs,qty,acosOv,triplet] = cols;
+          out.push({
+            id:newId(), sku, name, profileId, price:+price||0, cogs:+cogs||0, qty:+qty||0,
+            acosOv: acosOv || '', triplet: triplet || ''
+          });
+        }
+        rows = out;
+        saveRows(); renderRows();
+      }catch(err){ alert('Не удалось импортировать CSV'); }
+    };
+    reader.readAsText(file, 'utf-8');
+  });
+
+  // Profiles toolbar
+  qs('#addProfile').addEventListener('click', ()=>{
+    profiles.push({
+      id: newId(),
+      name: 'Новый профиль',
+      wb_rate: 0.25, tax_rate: 0.04, acos: 0.10,
+      logistics: 100, storage: 5, returns: 10
+    });
+    saveProfiles(); renderProfiles(); renderRows();
+  });
+  qs('#saveProfiles').addEventListener('click', ()=> { saveProfiles(); alert('Профили сохранены'); });
+  qs('#resetProfiles').addEventListener('click', ()=>{
+    localStorage.removeItem(profilesKey);
+    loadProfiles(); saveProfiles(); renderProfiles(); renderRows();
+  });
+
+  // ===== Init =====
+  loadProfiles();
+  loadRows();
+  renderProfiles();
+  renderRows();
+})();
+  </script>
+  <script defer src="{% static 'js/unit.page.js' %}"></script>
+  <script>document.addEventListener('DOMContentLoaded', ()=>{ if (window.feather) feather.replace({}); });</script>
+</body>
+</html>
